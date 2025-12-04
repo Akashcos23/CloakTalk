@@ -1,7 +1,3 @@
-
-// SignUpScreen.kt
-
-// This file contains the SignUpScreen composable for user registration in CloakTalk.
 package com.example.cloaktalk.ui.screens
 
 import android.util.Log
@@ -34,6 +30,16 @@ import androidx.compose.ui.unit.sp
 // --- IMPORTS FOR CREDENTIAL MANAGER ---
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
+
+// --- YOUR PROJECT IMPORTS ---
+import com.example.cloaktalk.R
+import com.example.cloaktalk.ui.theme.OrangeTheme
+import com.example.cloaktalk.auth.FirebaseAuthManager
+
 /**
  * Composable screen for user registration.
  * Provides fields for name, email, password, and Google sign-up.
@@ -41,8 +47,6 @@ import androidx.credentials.GetCredentialRequest
  * @param onSignUp Callback for successful sign up
  * @param onBackToLogin Callback for navigation to login
  * @param onGoogleSignUp Callback for Google sign up
- *
- * Author: Ahnaf
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,27 +55,9 @@ fun SignUpScreen(
     onBackToLogin: () -> Unit,
     onGoogleSignUp: () -> Unit = {}
 ) {
-    // State for full name input field
-import com.example.cloaktalk.ui.theme.OrangeTheme
-    // State for email input field
-import com.example.cloaktalk.auth.FirebaseAuthManager
-    // State for password input field
-
-    // State for confirm password input field
-@OptIn(ExperimentalMaterial3Api::class)
-    // State to toggle password visibility
-@Composable
-    // State to toggle confirm password visibility
-fun SignUpScreen(
-    onSignUp: () -> Unit,
-    // Get the current context
-    onBackToLogin: () -> Unit,
-    onGoogleSignUp: () -> Unit = {}
-    // Initialize Credential Manager and Coroutine Scope
-) {
+    // State variables
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    // Function to handle email sign up logic
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -79,10 +65,11 @@ fun SignUpScreen(
 
     val context = LocalContext.current
 
-    // 1. Initialize Credential Manager and Coroutine Scope
+    // Initialize Credential Manager and Coroutine Scope
     val credentialManager = remember { CredentialManager.create(context) }
     val coroutineScope = rememberCoroutineScope()
 
+    // Helper function for Email Sign Up
     fun tryEmailSignUp() {
         when {
             fullName.isBlank() -> Toast.makeText(context, "Enter your full name", Toast.LENGTH_SHORT).show()
@@ -91,7 +78,6 @@ fun SignUpScreen(
             password != confirmPassword -> Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
             else -> {
                 FirebaseAuthManager.signUpWithEmail(email.trim(), password) { success, _, message ->
-    // Main container for the sign up screen UI
                     if (success) {
                         Toast.makeText(context, "Account created", Toast.LENGTH_SHORT).show()
                         onSignUp()
@@ -106,7 +92,6 @@ fun SignUpScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-        // Card containing the sign up form
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -121,7 +106,6 @@ fun SignUpScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                // App logo in a circular gradient background
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
             colors = CardDefaults.cardColors(containerColor = OrangeTheme.Surface),
@@ -133,6 +117,7 @@ fun SignUpScreen(
                     .padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // App Logo
                 Box(
                     modifier = Modifier
                         .size(80.dp)
@@ -141,10 +126,8 @@ fun SignUpScreen(
                                 colors = listOf(OrangeTheme.Primary, OrangeTheme.PrimaryDark)
                             ),
                             CircleShape
-                // Spacer between logo and title
                         ),
                     contentAlignment = Alignment.Center
-                // Screen title
                 ) {
                     Icon(
                         imageVector = Icons.Default.PersonAdd,
@@ -152,17 +135,15 @@ fun SignUpScreen(
                         tint = Color.White,
                         modifier = Modifier.size(48.dp)
                     )
-                // Screen subtitle
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Title
                 Text(
                     text = "Create Account",
-                // Spacer before input fields
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
-                // Google sign up button
                     color = OrangeTheme.TextPrimary
                 )
 
@@ -174,16 +155,16 @@ fun SignUpScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // 2. UPDATED GOOGLE SIGN-IN BUTTON
+                // GOOGLE SIGN-UP BUTTON
                 OutlinedButton(
                     onClick = {
                         coroutineScope.launch {
                             try {
-                                // A. Build the Google Option using the 'googleid' library
+                                // A. Build the Google Option
                                 val googleIdOption = GetGoogleIdOption.Builder()
-                                    .setFilterByAuthorizedAccounts(false) // Show all accounts
+                                    .setFilterByAuthorizedAccounts(false)
                                     .setServerClientId(context.getString(R.string.default_web_client_id))
-                                    .setAutoSelectEnabled(false) // Ensure UI pops up
+                                    .setAutoSelectEnabled(false)
                                     .setNonce(null)
                                     .build()
 
@@ -207,6 +188,8 @@ fun SignUpScreen(
                                 FirebaseAuthManager.signInWithGoogle(idToken) { success, _, message ->
                                     if (success) {
                                         Toast.makeText(context, "Account created! Please log in", Toast.LENGTH_SHORT).show()
+                                        // Sign out to force manual login next time (optional flow choice)
+                                        //FirebaseAuthManager.signOut() //will be added later to firebase Auth
                                         onBackToLogin()
                                     } else {
                                         Toast.makeText(context, message ?: "Firebase Auth Failed", Toast.LENGTH_LONG).show()
@@ -215,7 +198,6 @@ fun SignUpScreen(
 
                             } catch (e: GetCredentialException) {
                                 Log.e("SignUpScreen", "Google Sign-In failed: ${e.message}")
-                                // Don't toast generic cancellations, only real errors
                                 if (!e.message.toString().contains("cancelled")) {
                                     Toast.makeText(context, "Sign in failed: ${e.message}", Toast.LENGTH_SHORT).show()
                                 }
@@ -244,10 +226,8 @@ fun SignUpScreen(
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.google_logo),
-                // Spacer before divider
                             contentDescription = "Google",
                             tint = Color.Unspecified,
-                // Divider with OR text
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -261,12 +241,11 @@ fun SignUpScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Divider
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                // Spacer before input fields
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                // Full name input field
                     Divider(modifier = Modifier.weight(1f).height(1.dp), color = OrangeTheme.Border)
                     Text(
                         text = " OR ",
@@ -280,15 +259,14 @@ fun SignUpScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Full Name Input
                 OutlinedTextField(
                     value = fullName,
                     onValueChange = { fullName = it },
                     label = { Text("Full Name", color = Color.LightGray) },
                     placeholder = { Text("John Doe", color = Color.LightGray) },
-                // Spacer before email field
                     leadingIcon = { Icon(Icons.Default.Person, null, tint = OrangeTheme.Primary) },
                     modifier = Modifier.fillMaxWidth(),
-                // Email input field
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = OrangeTheme.Primary,
                         unfocusedBorderColor = OrangeTheme.Border,
@@ -302,15 +280,14 @@ fun SignUpScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Email Input
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email", color = Color.LightGray) },
                     placeholder = { Text("your@email.com", color = Color.LightGray) },
-                // Spacer before password field
                     leadingIcon = { Icon(Icons.Default.Email, null, tint = OrangeTheme.Primary) },
                     modifier = Modifier.fillMaxWidth(),
-                // Password input field with visibility toggle
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = OrangeTheme.Primary,
                         unfocusedBorderColor = OrangeTheme.Border,
@@ -324,6 +301,7 @@ fun SignUpScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Password Input
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -339,10 +317,8 @@ fun SignUpScreen(
                                 tint = OrangeTheme.TextSecondary
                             )
                         }
-                // Spacer before confirm password field
                     },
                     modifier = Modifier.fillMaxWidth(),
-                // Confirm password input field with visibility toggle
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = OrangeTheme.Primary,
                         unfocusedBorderColor = OrangeTheme.Border,
@@ -356,6 +332,7 @@ fun SignUpScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Confirm Password Input
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
@@ -371,10 +348,8 @@ fun SignUpScreen(
                                 tint = OrangeTheme.TextSecondary
                             )
                         }
-                // Spacer before create account button
                     },
                     modifier = Modifier.fillMaxWidth(),
-                // Create account button
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = OrangeTheme.Primary,
                         unfocusedBorderColor = OrangeTheme.Border,
@@ -388,10 +363,9 @@ fun SignUpScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Spacer before login link
+                // Create Account Button
                 Button(
                     onClick = { tryEmailSignUp() },
-                // Login link and prompt
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -405,6 +379,7 @@ fun SignUpScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Footer: Login Link
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Already have an account? ", color = OrangeTheme.TextSecondary, fontSize = 14.sp)
                     TextButton(onClick = onBackToLogin, contentPadding = PaddingValues(0.dp)) {
