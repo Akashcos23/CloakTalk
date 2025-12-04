@@ -18,7 +18,7 @@ import com.example.cloaktalk.ui.screens.*
  * - Notifications
  * - Settings
  *
- * Author: Ahnaf
+ 
  */
 @Composable
 fun EncryptionApp() {
