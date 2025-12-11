@@ -38,6 +38,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
+        )
     }
     buildFeatures {
         compose = true
@@ -86,6 +90,13 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     // For build.gradle.kts
     implementation(libs.androidx.compose.material.icons.extended)
+
+    // Compose ViewModel interoperability
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+// (ensure you already have Compose dependencies, e.g.)
+    implementation("androidx.activity:activity-compose:1.8.0")
+    implementation("androidx.compose.ui:ui:1.5.0")
+    implementation("androidx.compose.material3:material3:1.2.0")
 
 
 
