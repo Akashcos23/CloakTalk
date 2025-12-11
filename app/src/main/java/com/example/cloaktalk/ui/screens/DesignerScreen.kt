@@ -1,12 +1,15 @@
 package com.example.cloaktalk.ui.screens
 
-import androidx.compose.foundation.BorderStroke
+
+import com.example.cloaktalk.ui.screens.designer.AlgoNameCard
+import com.example.cloaktalk.ui.screens.designer.BaseAlgoCard
+import com.example.cloaktalk.ui.screens.designer.AlgoParametersCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -15,15 +18,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.cloaktalk.ui.components.BottomNavigation
+import com.example.cloaktalk.ui.screens.designer.CharacterSetBuilder
+import com.example.cloaktalk.ui.screens.designer.EncryptionPreviewCard
+import com.example.cloaktalk.ui.screens.designer.StrengthMeterCard
+import com.example.cloaktalk.ui.screens.designer.calculateStrengthScore
+import com.example.cloaktalk.ui.screens.designer.previewEncryption
 import com.example.cloaktalk.ui.theme.OrangeTheme
 
 /**
  * Composable screen for designing custom encryption algorithms.
- * Allows users to specify algorithm name, base algorithm, key settings, advanced options, and test messages.
+ * Includes interactive character set builder for visual customization.
  *
  * @param onNavigate Callback for navigation events
- *
- 
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,12 +40,41 @@ fun DesignerScreen(onNavigate: (String) -> Unit) {
     var baseAlgo by remember { mutableStateOf("Caesar Cipher") }
     // Holds the shift amount for algorithms that use it
     var shiftAmount by remember { mutableStateOf("") }
-    // Holds the custom key entered by the user
-    var customKey by remember { mutableStateOf("") }
-    // Holds the key expiration time in minutes
-    var keyExpiration by remember { mutableStateOf("") }
     // Holds the test message for encryption
     var testMessage by remember { mutableStateOf("") }
+    // Advanced option: multiple encryption rounds
+    var multipleRounds by remember { mutableStateOf(false) }
+
+    // Character set selections
+    var selectedChars by remember { mutableStateOf(getDefaultCharacterSet()) }
+
+    // Encrypted result from live preview
+    var encryptedPreview by remember { mutableStateOf("") }
+
+    // Calculate strength score based on current configuration
+    val strengthScore = remember(shiftAmount, multipleRounds, selectedChars.size, baseAlgo) {
+        calculateStrengthScore(
+            baseAlgo = baseAlgo,
+            shiftAmount = shiftAmount,
+            multipleRounds = multipleRounds,
+            charSetSize = selectedChars.size
+        )
+    }
+
+    // Update preview when test message or parameters change
+    LaunchedEffect(testMessage, baseAlgo, shiftAmount, multipleRounds, selectedChars) {
+        if (testMessage.isNotEmpty()) {
+            encryptedPreview = previewEncryption(
+                plaintext = testMessage,
+                baseAlgo = baseAlgo,
+                shiftAmount = shiftAmount.toIntOrNull() ?: 13,
+                multipleRounds = multipleRounds,
+                charset = selectedChars
+            )
+        } else {
+            encryptedPreview = ""
+        }
+    }
 
     Scaffold(
         // Set the background color and bottom navigation bar
@@ -84,344 +119,97 @@ fun DesignerScreen(onNavigate: (String) -> Unit) {
                 // Spacer for layout separation
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Strength Meter Card
+                StrengthMeterCard(strengthScore = strengthScore)
+
+                // Spacer for layout separation
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Card for entering algorithm name
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    colors = CardDefaults.cardColors(containerColor = OrangeTheme.Surface),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        // Label for algorithm name
-                        Text("Algorithm Name", color = OrangeTheme.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        // Spacer for layout
-                        Spacer(modifier = Modifier.height(8.dp))
-                        // Text field for algorithm name input
-                        OutlinedTextField(
-                            value = algoName,
-                            onValueChange = { algoName = it },
-                            placeholder = { Text("e.g., My Super Cipher", color = Color.LightGray) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = OrangeTheme.Primary,
-                                unfocusedBorderColor = OrangeTheme.Border,
-                                focusedContainerColor = OrangeTheme.SurfaceVariant,
-                                unfocusedContainerColor = OrangeTheme.SurfaceVariant,
-                                focusedTextColor = OrangeTheme.TextPrimary,
-                                unfocusedTextColor = OrangeTheme.TextPrimary
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                    }
-                }
+                AlgoNameCard(algoName = algoName, onNameChange = { algoName = it })
 
                 // Spacer for layout separation
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Card for selecting base algorithm
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    colors = CardDefaults.cardColors(containerColor = OrangeTheme.Surface),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        // Label for base algorithm
-                        Text("Base Algorithm", color = OrangeTheme.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        // Spacer for layout
-                        Spacer(modifier = Modifier.height(8.dp))
+                BaseAlgoCard(baseAlgo = baseAlgo, onAlgoChange = { baseAlgo = it })
 
-                        // Dropdown for base algorithm options
-                        var expanded by remember { mutableStateOf(false) }
-                        val options = listOf("Caesar Cipher", "Substitution Cipher", "Vigenère Cipher", "Custom from Scratch")
-
-                        ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = !expanded }
-                        ) {
-                            OutlinedTextField(
-                                value = baseAlgo,
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = OrangeTheme.Primary,
-                                    unfocusedBorderColor = OrangeTheme.Border,
-                                    focusedContainerColor = OrangeTheme.SurfaceVariant,
-                                    unfocusedContainerColor = OrangeTheme.SurfaceVariant,
-                                    focusedTextColor = OrangeTheme.TextPrimary,
-                                    unfocusedTextColor = OrangeTheme.TextPrimary
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
-                                options.forEach { option ->
-                                    // Dropdown menu item for each algorithm option
-                                    DropdownMenuItem(
-                                        text = { Text(option) },
-                                        onClick = {
-                                            baseAlgo = option
-                                            expanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
+                // Spacer for layout separation
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    colors = CardDefaults.cardColors(containerColor = OrangeTheme.Surface),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Key Settings", color = OrangeTheme.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
+                // Card for algorithm parameters
+                AlgoParametersCard(
+                    shiftAmount = shiftAmount,
+                    onShiftChange = { shiftAmount = it },
+                    multipleRounds = multipleRounds,
+                    onRoundsChange = { multipleRounds = it }
+                )
 
-                        Text("Shift Amount", color = OrangeTheme.TextSecondary, fontSize = 12.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = shiftAmount,
-                            onValueChange = { shiftAmount = it },
-                            placeholder = { Text("13", color = Color.LightGray) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = OrangeTheme.Primary,
-                                unfocusedBorderColor = OrangeTheme.Border,
-                                focusedContainerColor = OrangeTheme.SurfaceVariant,
-                                unfocusedContainerColor = OrangeTheme.SurfaceVariant,
-                                focusedTextColor = OrangeTheme.TextPrimary,
-                                unfocusedTextColor = OrangeTheme.TextPrimary
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text("Custom Key", color = OrangeTheme.TextSecondary, fontSize = 12.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = customKey,
-                            onValueChange = { customKey = it },
-                            placeholder = { Text("Enter secret key", color = Color.LightGray) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = OrangeTheme.Primary,
-                                unfocusedBorderColor = OrangeTheme.Border,
-                                focusedContainerColor = OrangeTheme.SurfaceVariant,
-                                unfocusedContainerColor = OrangeTheme.SurfaceVariant,
-                                focusedTextColor = OrangeTheme.TextPrimary,
-                                unfocusedTextColor = OrangeTheme.TextPrimary
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text("Key Expiration (minutes)", color = OrangeTheme.TextSecondary, fontSize = 12.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = keyExpiration,
-                            onValueChange = { keyExpiration = it },
-                            placeholder = { Text("60", color = Color.LightGray) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = OrangeTheme.Primary,
-                                unfocusedBorderColor = OrangeTheme.Border,
-                                focusedContainerColor = OrangeTheme.SurfaceVariant,
-                                unfocusedContainerColor = OrangeTheme.SurfaceVariant,
-                                focusedTextColor = OrangeTheme.TextPrimary,
-                                unfocusedTextColor = OrangeTheme.TextPrimary
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                    }
-                }
-
+                // Spacer for layout separation
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    colors = CardDefaults.cardColors(containerColor = OrangeTheme.Surface),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Advanced Options", color = OrangeTheme.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
+                // Interactive Character Set Builder Card
+                CharacterSetBuilder(
+                    selectedChars = selectedChars,
+                    onSelectionChange = { selectedChars = it }
+                )
 
-                        var multipleRounds by remember { mutableStateOf(false) }
-                        var includeNumbers by remember { mutableStateOf(true) }
-                        var includeSymbols by remember { mutableStateOf(false) }
-                        var notifyAccess by remember { mutableStateOf(true) }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                        ) {
-                            Text("Multiple Rounds", color = OrangeTheme.TextPrimary, fontSize = 14.sp)
-                            Switch(
-                                checked = multipleRounds,
-                                onCheckedChange = { multipleRounds = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = OrangeTheme.Primary
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                        ) {
-                            Text("Include Numbers", color = OrangeTheme.TextPrimary, fontSize = 14.sp)
-                            Switch(
-                                checked = includeNumbers,
-                                onCheckedChange = { includeNumbers = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = OrangeTheme.Primary
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                        ) {
-                            Text("Include Symbols", color = OrangeTheme.TextPrimary, fontSize = 14.sp)
-                            Switch(
-                                checked = includeSymbols,
-                                onCheckedChange = { includeSymbols = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = OrangeTheme.Primary
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                        ) {
-                            Text("Notify on Key Access", color = OrangeTheme.TextPrimary, fontSize = 14.sp)
-                            Switch(
-                                checked = notifyAccess,
-                                onCheckedChange = { notifyAccess = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = OrangeTheme.Primary
-                                )
-                            )
-                        }
-                    }
-                }
-
+                // Spacer for layout separation
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    colors = CardDefaults.cardColors(containerColor = OrangeTheme.Surface),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Test Your Algorithm", color = OrangeTheme.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = testMessage,
-                            onValueChange = { testMessage = it },
-                            placeholder = { Text("Enter test message...", color = Color.LightGray) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(80.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = OrangeTheme.Primary,
-                                unfocusedBorderColor = OrangeTheme.Border,
-                                focusedContainerColor = OrangeTheme.SurfaceVariant,
-                                unfocusedContainerColor = OrangeTheme.SurfaceVariant,
-                                focusedTextColor = OrangeTheme.TextPrimary,
-                                unfocusedTextColor = OrangeTheme.TextPrimary
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        )
+                // Visual Cipher Preview Card
+                EncryptionPreviewCard(
+                    testMessage = testMessage,
+                    onTestMessageChange = { testMessage = it },
+                    encryptedPreview = encryptedPreview
+                )
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Button(
-                            onClick = { },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = OrangeTheme.Primary.copy(alpha = 0.2f),
-                                contentColor = OrangeTheme.Primary
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Test Encryption", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
+                // Spacer for layout separation
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Row containing Cancel and Save buttons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Cancel button - navigates back to home
                     OutlinedButton(
                         onClick = { onNavigate("home") },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = OrangeTheme.TextSecondary
                         ),
-                        border = BorderStroke(1.dp, OrangeTheme.Border),
-                        shape = RoundedCornerShape(12.dp)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeTheme.Border),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                     ) {
                         Text("Cancel", fontWeight = FontWeight.Bold)
                     }
 
+                    // Save button - saves the algorithm configuration
                     Button(
-                        onClick = { },
+                        onClick = { /* Save algorithm config */ },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = OrangeTheme.Primary
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                     ) {
                         Text("Save Algorithm", fontWeight = FontWeight.Bold)
                     }
                 }
 
+                // Bottom spacer
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
+}
+
+/**
+ * Get default character set (uppercase and lowercase letters)
+ */
+private fun getDefaultCharacterSet(): Set<Char> {
+    return (('A'..'Z') + ('a'..'z')).toSet()
 }
