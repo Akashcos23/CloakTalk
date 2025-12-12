@@ -50,10 +50,12 @@ android {
 
 dependencies {
     // Firebase BoM (Only use one. 34.6.0 is newer)
-    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
+    implementation(platform(libs.firebase.bom))
+    implementation ("com.google.firebase:firebase-auth-ktx:21.1.0")
 
     // Firebase (Versions managed by BoM)
-    implementation("com.google.firebase:firebase-analytics")
+    implementation(libs.firebase.analytics)
+
     implementation(libs.firebase.auth)
 
     // Credentials & Auth
@@ -62,7 +64,16 @@ dependencies {
     implementation(libs.googleid)
     // You had this hardcoded AND in libs. Only need one.
     // Ensure "libs.versions.toml" has the correct version for this if you use the alias
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation ("com.google.android.gms:play-services-auth:20.6.0")
+
+    implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.0")
+    implementation ("androidx.lifecycle:lifecycle-runtime-compose:2.6.0")
+    implementation ("androidx.navigation:navigation-compose:2.5.3")
+    implementation ("io.coil-kt:coil-compose:2.2.2")
+
+   
+
+
 
     // Core Android
     implementation(libs.androidx.core.ktx)
