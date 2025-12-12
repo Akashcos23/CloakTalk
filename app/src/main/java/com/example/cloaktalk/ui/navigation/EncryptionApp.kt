@@ -40,6 +40,9 @@ fun EncryptionApp() {
         "designer" -> DesignerScreen(onNavigate = { currentScreen = it })
         "notifications" -> NotificationsScreen(onNavigate = { currentScreen = it })
         "settings" -> SettingsScreen(onNavigate = { currentScreen = it })
+        "encrypt" -> EncryptScreen(onNavigate = { currentScreen = it })
+        "decrypt" -> DecryptScreen(onNavigate = { currentScreen = it })
+
         else -> HomeScreen(onNavigate = { currentScreen = it })
     }
 }
