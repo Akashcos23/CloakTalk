@@ -156,6 +156,7 @@ fun previewEncryption(
     val hasUppercase = charList.any { it in 'A'..'Z' }
     val hasNumbers = charList.any { it in '0'..'9' }
     val hasSymbols = charList.any { it in "!@#$%^&*()_+-=[]{}|;:,.<>?/~`" }
+    val hasSpace = charList.contains(' ')
 
     // Smart normalization: convert letters to available case, keep numbers/symbols
     val normalizedPlaintext = plaintext.map { char ->
@@ -178,6 +179,7 @@ fun previewEncryption(
             // Keep numbers and symbols as-is
             char in '0'..'9' -> if (hasNumbers) char else null
             char in "!@#$%^&*()_+-=[]{}|;:,.<>?/~`" -> if (hasSymbols) char else null
+            char == ' ' -> if (hasSpace) char else null
             // Remove whitespace and other characters
             else -> null
         }
