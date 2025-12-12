@@ -5,6 +5,7 @@ import androidx.compose.runtime.*
 import com.example.cloaktalk.ui.screens.*
 
 
+
 /**
  * Main composable function for CloakTalk app navigation.
  * Handles switching between different screens based on the current navigation state.
@@ -18,7 +19,7 @@ import com.example.cloaktalk.ui.screens.*
  * - Notifications
  * - Settings
  *
- 
+
  */
 @Composable
 fun EncryptionApp() {
