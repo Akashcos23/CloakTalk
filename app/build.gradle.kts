@@ -49,38 +49,40 @@ android {
 }
 
 dependencies {
-
-    // Firebase BoM (manages versions)
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    // Firebase BoM (Only use one. 34.6.0 is newer)
     implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
 
-    // When using the BoM, don't specify versions in Firebase dependencie
+    // Firebase (Versions managed by BoM)
     implementation("com.google.firebase:firebase-analytics")
-
-    // Firebase Auth
-    kotlin
     implementation(libs.firebase.auth)
 
-
-    // Google Sign-In
+    // Credentials & Auth
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    // You had this hardcoded AND in libs. Only need one.
+    // Ensure "libs.versions.toml" has the correct version for this if you use the alias
     implementation("com.google.android.gms:play-services-auth:20.7.0")
 
-    // Your existing dependencies...
-
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
-
+    // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.firebase.auth)
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services.auth)
-    implementation(libs.googleid)
+
+    // Icons (Fix the <version> placeholder in your libs.versions.toml!)
+    implementation(libs.androidx.compose.material.icons.extended)
+
+    // Lifecycle
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7") // Updated version
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -88,17 +90,4 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    // For build.gradle.kts
-    implementation(libs.androidx.compose.material.icons.extended)
-
-    // Compose ViewModel interoperability
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
-// (ensure you already have Compose dependencies, e.g.)
-    implementation("androidx.activity:activity-compose:1.8.0")
-    implementation("androidx.compose.ui:ui:1.5.0")
-    implementation("androidx.compose.material3:material3:1.2.0")
-
-
-
-
 }
