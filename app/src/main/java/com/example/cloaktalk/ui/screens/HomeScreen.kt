@@ -158,8 +158,12 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
                         .padding(horizontal = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    QuickActionCard("Encrypt", Icons.Default.Lock, Modifier.weight(1f)) { }
-                    QuickActionCard("Decrypt", Icons.Default.LockOpen, Modifier.weight(1f)) { }
+                    QuickActionCard("Encrypt", Icons.Default.Lock, Modifier.weight(1f)) {
+                        onNavigate("encrypt")
+                    }
+                    QuickActionCard("Decrypt", Icons.Default.LockOpen, Modifier.weight(1f)) {
+                        onNavigate("decrypt")
+                    }
                 }
 
                 // Spacer for layout separation
