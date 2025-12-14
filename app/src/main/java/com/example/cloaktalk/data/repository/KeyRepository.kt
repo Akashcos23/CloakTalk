@@ -74,6 +74,29 @@ package com.example.cloaktalk.data.repository
                 }
 
                 /**
+                 * Get count of active keys for a specific user.
+                 */
+                suspend fun getActiveKeyCountByUserId(userId: Long): Int {
+                    keyDao.deactivateExpiredKeys(System.currentTimeMillis())
+                    return keyDao.getActiveKeyCountByUserId(userId, System.currentTimeMillis())
+                }
+
+                /**
+                 * Get all active keys for a specific user.
+                 */
+                suspend fun getActiveKeysByUserId(userId: Long): List<KeyEntity> {
+                    keyDao.deactivateExpiredKeys(System.currentTimeMillis())
+                    return keyDao.getActiveKeysByUserId(userId, System.currentTimeMillis())
+                }
+
+                /**
+                 * Get all keys for a specific user.
+                 */
+                suspend fun getKeysByUserId(userId: Long): List<KeyEntity> {
+                    return keyDao.getKeysByUserId(userId)
+                }
+
+                /**
                  * Calculate expiration timestamp from hours.
                  */
                 fun calculateExpirationTime(hours: Int): Long {

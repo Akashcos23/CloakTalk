@@ -42,4 +42,13 @@ interface KeyDao {
 
     @Query("DELETE FROM key_table WHERE keyId = :keyId")
     suspend fun deleteKeyById(keyId: Long)
+
+    @Query("SELECT COUNT(*) FROM key_table WHERE user_id = :userId AND isActive = 1 AND keyExpire > :currentTime")
+    suspend fun getActiveKeyCountByUserId(userId: Long, currentTime: Long): Int
+
+    @Query("SELECT * FROM key_table WHERE user_id = :userId AND isActive = 1 AND keyExpire > :currentTime")
+    suspend fun getActiveKeysByUserId(userId: Long, currentTime: Long): List<KeyEntity>
+
+    @Query("SELECT * FROM key_table WHERE user_id = :userId ORDER BY createdAt DESC")
+    suspend fun getKeysByUserId(userId: Long): List<KeyEntity>
 }
