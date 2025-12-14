@@ -9,7 +9,7 @@ import androidx.room.PrimaryKey
  * History entity - tracks encryption/decryption history
  */
 @Entity(
-    tableName = "history",
+    tableName = "history_table",
     foreignKeys = [
         ForeignKey(
             entity = EncryptMessageEntity::class,
@@ -31,5 +31,6 @@ data class HistoryEntity(
     val historyId: Long = 0,
     val encryptId: Long,
     val decryptId: Long? = null,
-    val keyId: Long
+    val keyId: Long,
+    val createdAt: Long = System.currentTimeMillis()
 )

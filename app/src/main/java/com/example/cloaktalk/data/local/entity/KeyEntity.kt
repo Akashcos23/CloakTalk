@@ -1,18 +1,32 @@
 package com.example.cloaktalk.data.local.entity
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+    import androidx.room.Entity
+    import androidx.room.ForeignKey
+    import androidx.room.Index
+    import androidx.room.PrimaryKey
 
-/**
- * Key entity - stores encryption/decryption keys
- */
-@Entity(tableName = "key_table")
-data class KeyEntity(
-    @PrimaryKey(autoGenerate = true)
-    val keyId: Long = 0,
-    val key: String, // The actual key
-    val encryptId: Long,
-    val decryptIds: String = "", // Comma-separated decrypt IDs (multiple users can access)
-    val keyExpire: Long, // Timestamp for expiration
-    val isActive: Boolean = true // False when key expires
-)
+    /**
+     * Key entity - stores encryption/decryption keys
+     */
+    @Entity(
+        tableName = "key_table",
+        foreignKeys = [
+            ForeignKey(
+                entity = BaseAlgorithmEntity::class,
+                parentColumns = ["baseAlgoName"],
+                childColumns = ["baseAlgoName"],
+                onDelete = ForeignKey.CASCADE
+            )
+        ],
+        indices = [Index("baseAlgoName"), Index("key")]
+    )
+    data class KeyEntity(
+        @PrimaryKey(autoGenerate = true)
+        val keyId: Long = 0,
+        val key: String,
+        val baseAlgoName: String,
+        val designAlgorithmId: Long? = null,
+        val keyExpire: Long,
+        val isActive: Boolean = true,
+        val createdAt: Long = System.currentTimeMillis()
+    )

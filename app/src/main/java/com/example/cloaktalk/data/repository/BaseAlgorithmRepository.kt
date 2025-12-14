@@ -52,9 +52,12 @@ class BaseAlgorithmRepository(private val baseAlgorithmDao: BaseAlgorithmDao) {
      */
     suspend fun insertDefaultAlgorithms() {
         val defaultAlgorithms = listOf(
-            BaseAlgorithmEntity("Caesar Cipher"),
-            BaseAlgorithmEntity("Substitution Cipher"),
-            BaseAlgorithmEntity("Vigenère Cipher")
+            BaseAlgorithmEntity("Caesar Cipher","A substitution cipher that shifts letters by a fixed number of positions. " +
+                    "One of the oldest and simplest encryption techniques, named after Julius Caesar."),
+            BaseAlgorithmEntity("Substitution Cipher","A digraph substitution cipher using a 5x5 key matrix. " +
+                    "Encrypts pairs of letters, making frequency analysis more difficult."),
+            BaseAlgorithmEntity("Vigenère Cipher","A polyalphabetic substitution cipher using a keyword to determine shifts. " +
+                    "More secure than Caesar cipher as it uses multiple shift values.")
         )
         baseAlgorithmDao.insertAllBaseAlgorithms(defaultAlgorithms)
     }

@@ -9,5 +9,6 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "base_algorithm")
 data class BaseAlgorithmEntity(
     @PrimaryKey
-    val baseAlgoName: String // "Caesar Cipher", "Substitution Cipher", "Vigenère Cipher"
+    val baseAlgoName: String, // "Caesar Cipher", "Substitution Cipher", "Vigenère Cipher"
+    val description: String
 )
