@@ -32,5 +32,7 @@ data class DesignAlgorithmEntity(
     val algoName: String,
     val baseAlgoName: String,
     val charset: String, // Stores allowed character set
-    val userId: Long
+    val userId: Long,
+    val shiftAmount: Int?, // For Caesar and Vigenère algorithms
+    val multipleRounds: Boolean
 )
