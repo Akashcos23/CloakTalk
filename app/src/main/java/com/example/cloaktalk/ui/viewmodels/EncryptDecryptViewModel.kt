@@ -441,7 +441,6 @@ package com.example.cloaktalk.ui.viewmodel
                           * Refreshes the list of available algorithms.
                           * Call this when new algorithms are added to the database.
                           */
-                         @Suppress("unused")
                          fun refreshAlgorithms() {
                              loadAlgorithms()
                          }

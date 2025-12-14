@@ -112,9 +112,10 @@ fun EncryptScreen(
         onNavigate(destination)
     }
 
-    // Clear ViewModel state when screen is first composed (fresh start)
+    // Clear ViewModel state and refresh algorithms when screen is first composed (fresh start)
     LaunchedEffect(Unit) {
         viewModel.clearAllState()
+        viewModel.refreshAlgorithms()
     }
 
     // Auto-select first algorithm when algorithms are loaded
