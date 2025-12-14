@@ -42,7 +42,7 @@ import androidx.compose.foundation.BorderStroke
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SignUpScreen(onSignUp: () -> Unit, onBackToLogin: () -> Unit) {
+fun SignUpScreen(onSignUp: (Long) -> Unit, onBackToLogin: () -> Unit) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }

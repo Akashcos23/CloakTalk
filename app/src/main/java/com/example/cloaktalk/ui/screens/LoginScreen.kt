@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(onLogin: () -> Unit, onSignUp: () -> Unit) {
+fun LoginScreen(onLogin: (Long) -> Unit, onSignUp: () -> Unit) {
     // State for email and password input fields
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -81,7 +81,7 @@ fun LoginScreen(onLogin: () -> Unit, onSignUp: () -> Unit) {
                             "Welcome back, ${user.username}!",
                             Toast.LENGTH_SHORT
                         ).show()
-                        onLogin()
+                        onLogin(user.id)
                     } else {
                         Toast.makeText(
                             context,

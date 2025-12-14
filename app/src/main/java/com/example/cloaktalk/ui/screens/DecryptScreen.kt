@@ -59,7 +59,11 @@ package com.example.cloaktalk.ui.screens
      */
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun DecryptScreen(onNavigate: (String) -> Unit) {
+    fun DecryptScreen(
+        onNavigate: (String) -> Unit,
+        designAlgorithmRepository: DesignAlgorithmRepository,
+        userId: Long
+    )  {
         // Get context and database instance
         val context = LocalContext.current
         val database = remember { CloakTalkDatabase.getInstance(context) }

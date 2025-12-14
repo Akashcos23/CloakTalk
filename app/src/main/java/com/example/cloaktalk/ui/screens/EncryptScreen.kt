@@ -54,7 +54,11 @@ import com.example.cloaktalk.ui.viewmodel.EncryptDecryptViewModelFactory
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EncryptScreen(onNavigate: (String) -> Unit) {
+fun EncryptScreen(
+    onNavigate: (String) -> Unit,
+    designAlgorithmRepository: DesignAlgorithmRepository,
+    userId: Long
+) {
     // Get context and database instance
     val context = LocalContext.current
     val database = remember { CloakTalkDatabase.getInstance(context) }
