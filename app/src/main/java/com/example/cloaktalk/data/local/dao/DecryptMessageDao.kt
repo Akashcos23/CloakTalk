@@ -41,6 +41,8 @@ package com.example.cloaktalk.data.local.dao
 
         @Query("SELECT EXISTS(SELECT 1 FROM decrypt_message_table WHERE keyId = :keyId)")
         suspend fun decryptExistsForKey(keyId: Long): Boolean
+        @Query("SELECT * FROM decrypt_message_table ORDER BY createdAt DESC")
+        suspend fun getAllDecryptedMessages(): List<DecryptMessageEntity>
 
         @Query("""
             SELECT 

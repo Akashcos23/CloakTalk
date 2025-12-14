@@ -44,6 +44,9 @@ package com.example.cloaktalk.data.local.dao
                 @Query("SELECT EXISTS(SELECT 1 FROM history_table WHERE encryptId = :encryptId)")
                 suspend fun historyExistsForEncrypt(encryptId: Long): Boolean
 
+                @Query("SELECT * FROM history_table WHERE user_id = :userId ORDER BY historyId DESC")
+                suspend fun getHistoryByUserId(userId: Long): List<HistoryEntity>
+
                 @Query("""
                     SELECT 
                         h.historyId,
@@ -75,6 +78,23 @@ package com.example.cloaktalk.data.local.dao
                     ORDER BY h.historyId DESC
                 """)
                 suspend fun getAllHistoryComplete(): List<HistoryComplete>
+
+                @Query("""
+                    SELECT 
+                        h.historyId,
+                        h.encryptId,
+                        h.decryptId,
+                        e.encryptedMessage,
+                        e.algorithmName,
+                        d.decryptedMessage,
+                        h.createdAt
+                    FROM history_table h
+                    INNER JOIN encrypt_message_table e ON h.encryptId = e.encryptId
+                    LEFT JOIN decrypt_message_table d ON h.decryptId = d.decryptId
+                    WHERE h.user_id = :userId
+                    ORDER BY h.historyId DESC
+                """)
+                suspend fun getAllHistoryCompleteByUserId(userId: Long): List<HistoryComplete>
             }
 
             data class HistoryComplete(

@@ -48,7 +48,7 @@ package com.example.cloaktalk.data.local.database
                       DecryptMessageEntity::class,
                       HistoryEntity::class
                   ],
-                  version = 7,
+                  version = 8,
                   exportSchema = false
               )
               abstract class CloakTalkDatabase : RoomDatabase() {

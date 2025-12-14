@@ -23,7 +23,11 @@ interface EncryptMessageDao {
 
     @Query("SELECT * FROM encrypt_message_table ORDER BY encryptId DESC")
     fun getAllEncryptMessages(): Flow<List<EncryptMessageEntity>>
-
+    /**
+     * Get all encrypted messages as a List (One-shot query).
+     */
+    @Query("SELECT * FROM encrypt_message_table ORDER BY encryptId DESC")
+    suspend fun getAllEncryptedMessages(): List<EncryptMessageEntity>
     @Query("SELECT * FROM encrypt_message_table WHERE encryptId = :encryptId LIMIT 1")
     suspend fun getEncryptMessageById(encryptId: Long): EncryptMessageEntity?
 

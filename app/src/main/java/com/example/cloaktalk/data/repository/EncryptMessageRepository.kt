@@ -89,4 +89,11 @@ package com.example.cloaktalk.data.repository
                 suspend fun getEncryptMessageWithKey(encryptId: Long): EncryptMessageWithKey? {
                     return encryptMessageDao.getEncryptMessageWithKey(encryptId)
                 }
+                /**
+                 * Gets all encrypted messages from the database.
+                 */
+                suspend fun getAllEncryptedMessages(): List<EncryptMessageEntity> {
+                    return encryptMessageDao.getAllEncryptedMessages()
+                }
+
             }

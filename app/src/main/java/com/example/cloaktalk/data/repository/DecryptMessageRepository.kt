@@ -36,4 +36,11 @@ package com.example.cloaktalk.data.repository
                 suspend fun deleteDecryptMessageById(decryptId: Long) {
                     decryptMessageDao.deleteDecryptMessageById(decryptId)
                 }
+                /**
+                 * Gets all decrypted messages from the database.
+                 */
+                suspend fun getAllDecryptedMessages(): List<DecryptMessageEntity> {
+                    return decryptMessageDao.getAllDecryptedMessages()
+                }
+
             }

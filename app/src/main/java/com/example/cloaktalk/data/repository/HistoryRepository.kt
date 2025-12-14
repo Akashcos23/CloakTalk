@@ -61,4 +61,12 @@ package com.example.cloaktalk.data.repository
             suspend fun historyExistsForEncrypt(encryptId: Long): Boolean {
                 return historyDao.historyExistsForEncrypt(encryptId)
             }
+
+            suspend fun getHistoryByUserId(userId: Long): List<HistoryEntity> {
+                return historyDao.getHistoryByUserId(userId)
+            }
+
+            suspend fun getAllHistoryCompleteByUserId(userId: Long): List<HistoryComplete> {
+                return historyDao.getAllHistoryCompleteByUserId(userId)
+            }
         }

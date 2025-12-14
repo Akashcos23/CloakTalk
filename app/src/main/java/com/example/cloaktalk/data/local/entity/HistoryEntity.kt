@@ -22,6 +22,12 @@ import androidx.room.PrimaryKey
             parentColumns = ["keyId"],
             childColumns = ["keyId"],
             onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = UserEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["user_id"],
+            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [Index("encryptId"), Index("decryptId"), Index("keyId")]
@@ -32,5 +38,6 @@ data class HistoryEntity(
     val encryptId: Long,
     val decryptId: Long? = null,
     val keyId: Long,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val user_id: Long
 )
