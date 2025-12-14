@@ -202,7 +202,8 @@ package com.example.cloaktalk.ui.viewmodel
                                          baseAlgoName = selectedAlgorithm.baseAlgoName,
                                          designAlgorithmId = if (selectedAlgorithm.isDesignAlgorithm) selectedAlgorithm.id else null,
                                          keyExpire = expirationTime,
-                                         isActive = true
+                                         isActive = true,
+                                         user_id = userId
                                      )
                                      val keyId = keyRepository.insertKey(keyEntity)
 

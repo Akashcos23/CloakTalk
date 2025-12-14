@@ -18,28 +18,64 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.cloaktalk.data.local.database.CloakTalkDatabase
+import com.example.cloaktalk.data.repository.*
 import com.example.cloaktalk.ui.components.*
-import com.example.cloaktalk.ui.models.sampleHistory
 import com.example.cloaktalk.ui.theme.OrangeTheme
+import com.example.cloaktalk.ui.viewmodel.ActivityType
+import com.example.cloaktalk.ui.viewmodel.HomeViewModel
+import com.example.cloaktalk.ui.viewmodel.HomeViewModelFactory
+import com.example.cloaktalk.ui.viewmodel.RecentActivity
 
 /**
  * Composable screen for displaying the main dashboard.
  * Shows stats, quick actions, and recent activity.
  *
  * @param onNavigate Callback for navigation events
+ * @param userId The ID of the currently logged-in user
  *
  * Author: Ahnaf
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onNavigate: (String) -> Unit) {
+fun HomeScreen(
+    onNavigate: (String) -> Unit,
+    userId: Long
+) {
+    val context = LocalContext.current
+    val database = remember { CloakTalkDatabase.getInstance(context) }
+
+    // Initialize ViewModel with user-specific key
+    val viewModel: HomeViewModel = viewModel(
+        key = "home_viewmodel_$userId",
+        factory = HomeViewModelFactory(
+            HistoryRepository(database.historyDao()),
+            KeyRepository(database.keyDao()),
+            EncryptMessageRepository(database.encryptMessageDao()),
+            DecryptMessageRepository(database.decryptMessageDao()),
+            BaseAlgorithmRepository(database.baseAlgorithmDao()),
+            DesignAlgorithmRepository(database.designAlgorithmDao()),
+            userId
+        )
+    )
+
+    val homeStats by viewModel.homeStats.collectAsState()
+    val recentActivities by viewModel.recentActivities.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    // Refresh data when screen is displayed
+    LaunchedEffect(Unit) {
+        viewModel.loadHomeData()
+    }
+
     // Scaffold provides the basic layout structure
     Scaffold(
         // Set the background color and bottom navigation bar
@@ -125,9 +161,27 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            StatsCard("24", "Encryptions", Icons.Default.Lock, "Active", modifier = Modifier.weight(1f))
-                            StatsCard("12", "Active Keys", Icons.Default.Key, null, modifier = Modifier.weight(1f))
-                            StatsCard("8", "Algorithms", Icons.Default.Shield, null, modifier = Modifier.weight(1f))
+                            StatsCard(
+                                homeStats.encryptionCount.toString(), 
+                                "Encryptions", 
+                                Icons.Default.Lock, 
+                                if (homeStats.encryptionCount > 0) "Active" else null, 
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatsCard(
+                                homeStats.activeKeyCount.toString(), 
+                                "Active Keys", 
+                                Icons.Default.Key, 
+                                null, 
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatsCard(
+                                homeStats.algorithmCount.toString(), 
+                                "Algorithms", 
+                                Icons.Default.Shield, 
+                                null, 
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
@@ -198,16 +252,106 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Display up to 3 recent activity items
-            items(sampleHistory.take(3)) { item ->
-                RecentActivityItem(item)
-                Spacer(modifier = Modifier.height(12.dp))
+            // Display up to 3 recent activity items from real data
+            if (recentActivities.isEmpty() && !isLoading) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp),
+                        colors = CardDefaults.cardColors(containerColor = OrangeTheme.Surface),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No recent activity yet",
+                                color = OrangeTheme.TextSecondary,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(recentActivities) { activity ->
+                    RecentActivityItemReal(activity)
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
 
             item {
                 // Spacer at the end of the list
                 Spacer(modifier = Modifier.height(24.dp))
             }
+        }
+    }
+}
+
+/**
+ * Displays a recent activity item for real encryption/decryption history.
+ * @param activity The recent activity data
+ */
+@Composable
+private fun RecentActivityItemReal(activity: RecentActivity) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        colors = CardDefaults.cardColors(containerColor = OrangeTheme.Surface),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        if (activity.type == ActivityType.ENCRYPT) 
+                            OrangeTheme.Primary.copy(alpha = 0.2f) 
+                        else 
+                            Color(0xFF4CAF50).copy(alpha = 0.2f), 
+                        RoundedCornerShape(8.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (activity.type == ActivityType.ENCRYPT) Icons.Default.Lock else Icons.Default.LockOpen, 
+                    null, 
+                    tint = if (activity.type == ActivityType.ENCRYPT) OrangeTheme.Primary else Color(0xFF4CAF50), 
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    activity.message, 
+                    color = OrangeTheme.TextPrimary, 
+                    fontWeight = FontWeight.Bold, 
+                    fontSize = 14.sp
+                )
+                Text(
+                    "${activity.algorithm} • ${activity.date}", 
+                    color = OrangeTheme.TextSecondary, 
+                    fontSize = 12.sp
+                )
+            }
+            // Status indicator
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(
+                        if (activity.isKeyActive) Color(0xFF4CAF50) else Color.Red,
+                        CircleShape
+                    )
+            )
         }
     }
 }

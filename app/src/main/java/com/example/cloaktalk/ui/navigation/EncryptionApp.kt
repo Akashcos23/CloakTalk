@@ -107,8 +107,12 @@ fun EncryptionApp() {
          * Home Screen
          * - Main dashboard with navigation options
          * - Entry point to all other features
+         * - Requires user ID for user-specific stats and activity
          */
-        "home" -> HomeScreen(onNavigate = { currentScreen = it })
+        "home" -> HomeScreen(
+            onNavigate = { currentScreen = it },
+            userId = loggedInUserId ?: 0L
+        )
 
         /**
          * History Screen
@@ -172,6 +176,9 @@ fun EncryptionApp() {
          * Default fallback
          * - Navigates to home screen for unknown routes
          */
-        else -> HomeScreen(onNavigate = { currentScreen = it })
+        else -> HomeScreen(
+            onNavigate = { currentScreen = it },
+            userId = loggedInUserId ?: 0L
+        )
     }
 }
