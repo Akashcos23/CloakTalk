@@ -38,14 +38,15 @@ import com.example.cloaktalk.ui.viewmodel.EncryptDecryptViewModelFactory
  * - Encrypted output display with copy functionality
  * - Action buttons for encrypting another message or navigating back
  *
- * The screen uses [EncryptDecryptViewModel] to handle:
- * - Loading available algorithms from the database
- * - Performing encryption operations
- * - Storing encryption records in the database
- * - Managing UI state (loading, results)
+ * State Management:
+ * - Local UI state is reset when navigating away using DisposableEffect
+ * - ViewModel state is cleared when navigating back to home
+ * - Fresh state is ensured on each screen visit
  *
  * @param onNavigate Callback function for navigation to other screens.
  *                   Called with screen route string (e.g., "home", "decrypt", "history")
+ * @param designAlgorithmRepository Repository for accessing design algorithms
+ * @param userId The ID of the currently logged-in user
  *
  * @see EncryptDecryptViewModel
  * @see MessageInputCard
@@ -85,6 +86,34 @@ fun EncryptScreen(
     var keyExpireHours by remember { mutableStateOf(24) }
     var showAlgorithmDropdown by remember { mutableStateOf(false) }
 
+    /**
+     * Resets all local UI state to default values.
+     * Called when user wants to encrypt another message or navigates away.
+     */
+    fun resetLocalState() {
+        plaintext = ""
+        selectedAlgorithm = null
+        keyExpireHours = 24
+        showAlgorithmDropdown = false
+    }
+
+    /**
+     * Handles navigation with state cleanup.
+     * Clears both local and ViewModel state before navigating.
+     *
+     * @param destination The screen route to navigate to
+     */
+    fun navigateWithCleanup(destination: String) {
+        resetLocalState()
+        viewModel.clearAllState()
+        onNavigate(destination)
+    }
+
+    // Clear ViewModel state when screen is first composed (fresh start)
+    LaunchedEffect(Unit) {
+        viewModel.clearAllState()
+    }
+
     // Auto-select first algorithm when algorithms are loaded
     LaunchedEffect(algorithms) {
         if (algorithms.isNotEmpty() && selectedAlgorithm == null) {
@@ -94,7 +123,12 @@ fun EncryptScreen(
 
     Scaffold(
         containerColor = OrangeTheme.Background,
-        bottomBar = { BottomNavigation("encrypt", onNavigate) }
+        bottomBar = {
+            // Use navigateWithCleanup for bottom navigation
+            BottomNavigation("encrypt") { destination ->
+                navigateWithCleanup(destination)
+            }
+        }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -133,7 +167,7 @@ fun EncryptScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Key Expiration Selection Card
+                // Key Expiration Card
                 KeyExpirationCard(
                     selectedHours = keyExpireHours,
                     onHoursSelected = { keyExpireHours = it }
@@ -143,7 +177,9 @@ fun EncryptScreen(
 
                 // Encrypt Button
                 EncryptButton(
-                    enabled = plaintext.isNotEmpty() && selectedAlgorithm != null && !isLoading,
+                    enabled = plaintext.isNotEmpty() &&
+                            selectedAlgorithm != null &&
+                            !isLoading,
                     isLoading = isLoading,
                     onClick = {
                         selectedAlgorithm?.let { algorithm ->
@@ -152,13 +188,15 @@ fun EncryptScreen(
                                 selectedAlgorithm = algorithm,
                                 keyExpireHours = keyExpireHours
                             ) { text, algoName, key ->
-                                performEncryption(
+                                val result = performEncryption(
                                     plaintext = text,
                                     algorithm = algoName,
                                     key = key,
                                     charset = (' '..'~').toSet(),
                                     multipleRounds = false
                                 )
+                                result.encryptedText
+
                             }
                         }
                     }
@@ -172,10 +210,18 @@ fun EncryptScreen(
                         result = result,
                         keyExpireHours = keyExpireHours,
                         onEncryptAnother = {
-                            plaintext = ""
+                            // Reset local state and clear ViewModel result
+                            resetLocalState()
                             viewModel.clearEncryptionResult()
+                            // Re-select first algorithm
+                            if (algorithms.isNotEmpty()) {
+                                selectedAlgorithm = algorithms.first()
+                            }
                         },
-                        onNavigateBack = { onNavigate("home") }
+                        onNavigateBack = {
+                            // Navigate with full cleanup
+                            navigateWithCleanup("home")
+                        }
                     )
                 }
             }
@@ -185,6 +231,7 @@ fun EncryptScreen(
 
 /**
  * Header section for the Encrypt Screen with gradient background.
+ * Displays the screen title and subtitle with an orange gradient.
  */
 @Composable
 private fun EncryptScreenHeader() {
@@ -214,7 +261,7 @@ private fun EncryptScreenHeader() {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Convert your message into secure cipher",
+                text = "Secure your message with encryption",
                 fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.9f)
             )
@@ -225,7 +272,7 @@ private fun EncryptScreenHeader() {
 /**
  * Card containing the algorithm selection dropdown.
  *
- * @param algorithms List of available algorithms
+ * @param algorithms List of available algorithms (base + custom)
  * @param selectedAlgorithm Currently selected algorithm
  * @param showDropdown Whether the dropdown is expanded
  * @param onExpandedChange Callback when dropdown expansion changes
@@ -253,6 +300,12 @@ private fun AlgorithmSelectionCard(
                 fontWeight = FontWeight.Bold,
                 color = OrangeTheme.TextPrimary
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Choose an encryption algorithm",
+                fontSize = 12.sp,
+                color = OrangeTheme.TextSecondary
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
             ExposedDropdownMenuBox(
@@ -271,8 +324,8 @@ private fun AlgorithmSelectionCard(
                         .menuAnchor(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = OrangeTheme.Primary,
-                        unfocusedBorderColor = OrangeTheme.Border ,
-                                focusedTextColor = OrangeTheme.TextPrimary,
+                        unfocusedBorderColor = OrangeTheme.Border,
+                        focusedTextColor = OrangeTheme.TextPrimary,
                         unfocusedTextColor = OrangeTheme.TextPrimary,
                         focusedTrailingIconColor = OrangeTheme.TextPrimary,
                         unfocusedTrailingIconColor = OrangeTheme.TextSecondary
@@ -311,6 +364,7 @@ private fun AlgorithmSelectionCard(
 
 /**
  * Card for selecting key expiration time.
+ * Provides predefined options: 1h, 6h, 12h, 24h, 48h, 72h.
  *
  * @param selectedHours Currently selected expiration hours
  * @param onHoursSelected Callback when hours are selected
@@ -320,6 +374,8 @@ private fun KeyExpirationCard(
     selectedHours: Int,
     onHoursSelected: (Int) -> Unit
 ) {
+    val expirationOptions = listOf(1, 6, 12, 24, 48, 72)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -329,17 +385,23 @@ private fun KeyExpirationCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Key Expiration Time",
+                text = "Key Expiration",
                 fontWeight = FontWeight.Bold,
                 color = OrangeTheme.TextPrimary
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "How long should the decryption key be valid?",
+                fontSize = 12.sp,
+                color = OrangeTheme.TextSecondary
+            )
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf(1, 6, 12, 24, 48, 72).forEach { hours ->
+                expirationOptions.forEach { hours ->
                     FilterChip(
                         selected = selectedHours == hours,
                         onClick = { onHoursSelected(hours) },
@@ -400,7 +462,7 @@ private fun EncryptButton(
  * @param result The encryption result to display
  * @param keyExpireHours The key expiration time in hours
  * @param onEncryptAnother Callback to encrypt another message
- * @param onNavigateBack Callback to navigate back
+ * @param onNavigateBack Callback to navigate back to home
  */
 @Composable
 private fun EncryptionResultSection(
@@ -410,20 +472,20 @@ private fun EncryptionResultSection(
     onNavigateBack: () -> Unit
 ) {
     if (result.success) {
-        // Success state
+        // Success state - show encrypted output
         EncryptedOutputCard(
             encryptedMessage = result.encryptedMessage,
             encryptionKey = result.key
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Expiration info card
+        // Key expiration info card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
-            colors = CardDefaults.cardColors(containerColor = OrangeTheme.Surface),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
             shape = RoundedCornerShape(12.dp)
         ) {
             Row(
@@ -439,46 +501,8 @@ private fun EncryptionResultSection(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Key expires in $keyExpireHours hours",
-                    color = OrangeTheme.TextSecondary,
+                    color = Color(0xFFE65100),
                     fontSize = 14.sp
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Action buttons
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(
-                onClick = onEncryptAnother,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = OrangeTheme.Primary
-                )
-            ) {
-                Text(
-                    text = "Encrypt Another",
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            OutlinedButton(
-                onClick = onNavigateBack,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = OrangeTheme.Primary
-                )
-            ) {
-                Text(
-                    text = "Back to Home",
-                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -489,22 +513,67 @@ private fun EncryptionResultSection(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "❌",
+                        fontSize = 24.sp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Encryption Failed",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Red,
+                        fontSize = 18.sp
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "❌ Encryption Failed",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Red,
-                    fontSize = 16.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = result.errorMessage ?: "An unknown error occurred",
+                    text = result.errorMessage ?: "An error occurred during encryption.",
                     color = Color.Red.copy(alpha = 0.8f),
                     fontSize = 14.sp
                 )
             }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Action buttons (shown for both success and error states)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        OutlinedButton(
+            onClick = onEncryptAnother,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = OrangeTheme.Primary
+            )
+        ) {
+            Text(
+                text = "Encrypt Another",
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        OutlinedButton(
+            onClick = onNavigateBack,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = OrangeTheme.Primary
+            )
+        ) {
+            Text(
+                text = "Back to Home",
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
