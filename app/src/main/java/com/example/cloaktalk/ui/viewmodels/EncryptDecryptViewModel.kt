@@ -330,6 +330,98 @@ package com.example.cloaktalk.ui.viewmodel
                          }
 
                          /**
+                          * Decrypts a message using only the key (key-based decryption).
+                          * The algorithm is automatically determined from the key's associated data.
+                          *
+                          * This function:
+                          * 1. Validates that the key exists and is active (not expired)
+                          * 2. Retrieves the algorithm name from the original encrypted message
+                          * 3. Performs the decryption using the stored algorithm
+                          * 4. Stores the decryption record in the DecryptMessage table
+                          * 5. Creates a history record for the user
+                          *
+                          * @param encryptedText The encrypted message to decrypt
+                          * @param key The decryption key (8-digit)
+                          * @param userId The ID of the user performing the decryption
+                          * @param decryptFunction Function that performs the actual decryption (encryptedText, algorithmName, key) -> decryptedText
+                          */
+                         fun decryptMessageByKey(
+                             encryptedText: String,
+                             key: String,
+                             userId: Long,
+                             decryptFunction: (String, String, String) -> String
+                         ) {
+                             viewModelScope.launch {
+                                 _isLoading.value = true
+                                 try {
+                                     // Check if key exists and is active (also deactivates expired keys)
+                                     val keyEntity = keyRepository.getActiveKeyByValue(key)
+
+                                     if (keyEntity == null) {
+                                         // Key is invalid, expired, or doesn't exist
+                                         _decryptionResult.value = DecryptionResult(
+                                             decryptedMessage = "",
+                                             success = false,
+                                             errorMessage = "Invalid or expired key. Decryption not allowed."
+                                         )
+                                         return@launch
+                                     }
+
+                                     // Get the original encrypted message to find the algorithm used
+                                     val encryptRecord = encryptMessageRepository.getEncryptMessageByKeyId(keyEntity.keyId)
+                                     
+                                     if (encryptRecord == null) {
+                                         _decryptionResult.value = DecryptionResult(
+                                             decryptedMessage = "",
+                                             success = false,
+                                             errorMessage = "Could not find the original encryption record for this key."
+                                         )
+                                         return@launch
+                                     }
+
+                                     val algorithmName = encryptRecord.algorithmName
+
+                                     // Perform decryption using the algorithm from the original encryption
+                                     val decryptedText = decryptFunction(encryptedText, algorithmName, key)
+
+                                     // Create and save decryption record
+                                     val decryptMessageEntity = DecryptMessageEntity(
+                                         encryptedMessage = encryptedText,
+                                         decryptedMessage = decryptedText,
+                                         keyId = keyEntity.keyId,
+                                         algorithmName = algorithmName,
+                                         isSuccessful = true
+                                     )
+                                     val decryptId = decryptMessageRepository.insertDecryptMessage(decryptMessageEntity)
+
+                                     // Create and save history record for the user
+                                     val historyEntity = HistoryEntity(
+                                         encryptId = encryptRecord.encryptId,
+                                         decryptId = decryptId,
+                                         keyId = keyEntity.keyId,
+                                         user_id = userId
+                                     )
+                                     historyRepository.insertHistory(historyEntity)
+
+                                     // Update result state with success
+                                     _decryptionResult.value = DecryptionResult(
+                                         decryptedMessage = decryptedText,
+                                         success = true
+                                     )
+                                 } catch (e: Exception) {
+                                     // Update result state with failure
+                                     _decryptionResult.value = DecryptionResult(
+                                         decryptedMessage = "",
+                                         success = false,
+                                         errorMessage = e.message ?: "Decryption failed"
+                                     )
+                                 } finally {
+                                     _isLoading.value = false
+                                 }
+                             }
+                         }
+
+                         /**
                           * Clears the current encryption result.
                           * Call this when starting a new encryption operation.
                           */

@@ -24,7 +24,6 @@ import com.example.cloaktalk.ui.screens.decrypt.EncryptedMessageInputCard
 import com.example.cloaktalk.ui.screens.decrypt.KeyInputCard
 import com.example.cloaktalk.ui.screens.decrypt.performDecryption
 import com.example.cloaktalk.ui.theme.OrangeTheme
-import com.example.cloaktalk.ui.viewmodel.AlgorithmOption
 import com.example.cloaktalk.ui.viewmodel.DecryptionResult
 import com.example.cloaktalk.ui.viewmodel.EncryptDecryptViewModel
 import com.example.cloaktalk.ui.viewmodel.EncryptDecryptViewModelFactory
@@ -33,7 +32,7 @@ import com.example.cloaktalk.ui.viewmodel.EncryptDecryptViewModelFactory
  * Decrypt Screen Composable - Main screen for message decryption.
  *
  * This screen provides a complete interface for decrypting messages with the following features:
- * - Algorithm selection dropdown (must match the encryption algorithm used)
+ * - Key-based decryption (algorithm is automatically determined from the key)
  * - Encrypted message input field
  * - Decryption key input field (8-digit key from encryption)
  * - Decrypt button with loading state
@@ -83,15 +82,12 @@ fun DecryptScreen(
     )
 
     // Collect state from ViewModel
-    val algorithms by viewModel.algorithms.collectAsState()
     val decryptionResult by viewModel.decryptionResult.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
     // Local UI state
     var encryptedMessage by remember { mutableStateOf("") }
     var decryptionKey by remember { mutableStateOf("") }
-    var selectedAlgorithm by remember { mutableStateOf<AlgorithmOption?>(null) }
-    var showAlgorithmDropdown by remember { mutableStateOf(false) }
 
     /**
      * Resets all local UI state to default values.
@@ -100,8 +96,6 @@ fun DecryptScreen(
     fun resetLocalState() {
         encryptedMessage = ""
         decryptionKey = ""
-        selectedAlgorithm = null
-        showAlgorithmDropdown = false
     }
 
     /**
@@ -119,13 +113,6 @@ fun DecryptScreen(
     // Clear ViewModel state when screen is first composed (fresh start)
     LaunchedEffect(Unit) {
         viewModel.clearAllState()
-    }
-
-    // Auto-select first algorithm when algorithms are loaded
-    LaunchedEffect(algorithms) {
-        if (algorithms.isNotEmpty() && selectedAlgorithm == null) {
-            selectedAlgorithm = algorithms.first()
-        }
     }
 
     Scaffold(
@@ -152,20 +139,6 @@ fun DecryptScreen(
             item {
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Algorithm Selection Card
-                DecryptAlgorithmSelectionCard(
-                    algorithms = algorithms,
-                    selectedAlgorithm = selectedAlgorithm,
-                    showDropdown = showAlgorithmDropdown,
-                    onExpandedChange = { showAlgorithmDropdown = it },
-                    onAlgorithmSelected = { algorithm ->
-                        selectedAlgorithm = algorithm
-                        showAlgorithmDropdown = false
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // Encrypted Message Input Card
                 EncryptedMessageInputCard(
                     encryptedMessage = encryptedMessage,
@@ -180,32 +153,57 @@ fun DecryptScreen(
                     onKeyChange = { decryptionKey = it }
                 )
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Info card about key-based decryption
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    colors = CardDefaults.cardColors(containerColor = OrangeTheme.Primary.copy(alpha = 0.1f)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "ℹ️",
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "The algorithm is automatically detected from your key",
+                            color = OrangeTheme.TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Decrypt Button
                 DecryptButton(
                     enabled = encryptedMessage.isNotEmpty() &&
                             decryptionKey.isNotEmpty() &&
-                            selectedAlgorithm != null &&
                             !isLoading,
                     isLoading = isLoading,
                     onClick = {
-                        selectedAlgorithm?.let { algorithm ->
-                            viewModel.decryptMessage(
-                                encryptedText = encryptedMessage,
-                                key = decryptionKey,
-                                selectedAlgorithm = algorithm,
-                                userId = userId
-                            ) { text, algoName, key ->
-                                val result = performDecryption(
-                                    encryptedMessage = text,
-                                    algorithm = algoName,
-                                    key = key,
-                                    charset = (' '..'~').toSet(),
-                                    multipleRounds = false
-                                )
-                                result.decryptedText
-                            }
+                        viewModel.decryptMessageByKey(
+                            encryptedText = encryptedMessage,
+                            key = decryptionKey,
+                            userId = userId
+                        ) { text, algoName, key ->
+                            val result = performDecryption(
+                                encryptedMessage = text,
+                                algorithm = algoName,
+                                key = key,
+                                charset = (' '..'~').toSet(),
+                                multipleRounds = false
+                            )
+                            result.decryptedText
                         }
                     }
                 )
@@ -220,10 +218,6 @@ fun DecryptScreen(
                             // Reset local state and clear ViewModel result
                             resetLocalState()
                             viewModel.clearDecryptionResult()
-                            // Re-select first algorithm
-                            if (algorithms.isNotEmpty()) {
-                                selectedAlgorithm = algorithms.first()
-                            }
                         },
                         onNavigateBack = {
                             // Navigate with full cleanup
@@ -272,99 +266,6 @@ private fun DecryptScreenHeader() {
                 fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.9f)
             )
-        }
-    }
-}
-
-/**
- * Card containing the algorithm selection dropdown for decryption.
- *
- * @param algorithms List of available algorithms
- * @param selectedAlgorithm Currently selected algorithm
- * @param showDropdown Whether the dropdown is expanded
- * @param onExpandedChange Callback when dropdown expansion changes
- * @param onAlgorithmSelected Callback when an algorithm is selected
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DecryptAlgorithmSelectionCard(
-    algorithms: List<AlgorithmOption>,
-    selectedAlgorithm: AlgorithmOption?,
-    showDropdown: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-    onAlgorithmSelected: (AlgorithmOption) -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        colors = CardDefaults.cardColors(containerColor = OrangeTheme.Surface),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Select Algorithm",
-                fontWeight = FontWeight.Bold,
-                color = OrangeTheme.TextPrimary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Must match the encryption algorithm",
-                fontSize = 12.sp,
-                color = OrangeTheme.TextSecondary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ExposedDropdownMenuBox(
-                expanded = showDropdown,
-                onExpandedChange = onExpandedChange
-            ) {
-                OutlinedTextField(
-                    value = selectedAlgorithm?.name ?: "Select Algorithm",
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDropdown)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = OrangeTheme.Primary,
-                        unfocusedBorderColor = OrangeTheme.Border,
-                        focusedTextColor = OrangeTheme.TextPrimary,
-                        unfocusedTextColor = OrangeTheme.TextPrimary,
-                        focusedTrailingIconColor = OrangeTheme.TextPrimary,
-                        unfocusedTrailingIconColor = OrangeTheme.TextSecondary
-                    )
-                )
-
-                ExposedDropdownMenu(
-                    expanded = showDropdown,
-                    onDismissRequest = { onExpandedChange(false) }
-                ) {
-                    if (algorithms.isEmpty()) {
-                        DropdownMenuItem(
-                            text = { Text("No algorithms available") },
-                            onClick = { },
-                            enabled = false
-                        )
-                    } else {
-                        algorithms.forEach { algorithm ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = if (algorithm.isDesignAlgorithm)
-                                            "${algorithm.name} (Custom)"
-                                        else algorithm.name
-                                    )
-                                },
-                                onClick = { onAlgorithmSelected(algorithm) }
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }
