@@ -1,0 +1,76 @@
+{
+  "project_info": {
+    "project_number": "155381726402",
+    "project_id": "cloaktalk-f501f",
+    "storage_bucket": "cloaktalk-f501f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:155381726402:android:38cc40da1eefbbb2008f5b",
+        "android_client_info": {
+          "package_name": "com.example.cloaktalk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "155381726402-5398sth3ii8ggpi6gvcsi2hukh9q67ro.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXCrL2ijtSwZlWd0E9bpcOM5_HpeVYRVQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "155381726402-5398sth3ii8ggpi6gvcsi2hukh9q67ro.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:155381726402:android:af8b8cebdca68d1d008f5b",
+        "android_client_info": {
+          "package_name": "com.example.securechat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "155381726402-ul04t51lqeiffej7pn0v2sfj5rncdkro.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.securechat",
+            "certificate_hash": "4a28d0081ed21e0708a0d4c41f02674422757532"
+          }
+        },
+        {
+          "client_id": "155381726402-5398sth3ii8ggpi6gvcsi2hukh9q67ro.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXCrL2ijtSwZlWd0E9bpcOM5_HpeVYRVQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "155381726402-5398sth3ii8ggpi6gvcsi2hukh9q67ro.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
