@@ -48,12 +48,14 @@ import java.util.*
  *
  * @param onNavigate Callback for navigation events
  * @param userId The ID of the currently logged-in user
+ * @param onLogout Callback when user logs out (clears session)
  *
  */
 @Composable
 fun SettingsScreen(
     onNavigate: (String) -> Unit,
-    userId: Long
+    userId: Long,
+    onLogout: () -> Unit
 ) {
     // Database and repository setup
     val context = LocalContext.current
@@ -518,7 +520,7 @@ fun SettingsScreen(
             item {
                 // Logout button
                 Button(
-                    onClick = { onNavigate("login") },
+                    onClick = { onLogout() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)

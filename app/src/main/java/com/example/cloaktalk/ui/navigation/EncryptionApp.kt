@@ -2,6 +2,7 @@ package com.example.cloaktalk.ui.navigation
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import com.example.cloaktalk.data.local.SessionManager
 import com.example.cloaktalk.data.local.database.CloakTalkDatabase
 import com.example.cloaktalk.data.repository.DesignAlgorithmRepository
 import com.example.cloaktalk.ui.screens.*
@@ -13,6 +14,7 @@ import com.example.cloaktalk.ui.screens.*
  * This composable manages:
  * - Navigation state between all app screens
  * - User authentication state (logged-in user ID)
+ * - Session persistence across app restarts
  * - Database and repository instances for data operations
  *
  * Screens supported:
@@ -28,29 +30,39 @@ import com.example.cloaktalk.ui.screens.*
  */
 @Composable
 fun EncryptionApp() {
+    // ==================== Context & Session Management ====================
+
+    /**
+     * Get the current Android context for database and session initialization.
+     */
+    val context = LocalContext.current
+
+    /**
+     * Session manager for persisting login state across app restarts.
+     */
+    val sessionManager = remember { SessionManager.getInstance(context) }
+
     // ==================== State Management ====================
 
     /**
-     * Holds the current screen state.
-     * Determines which screen composable to render.
-     * Default: "login" - starts at login screen
-     */
-    var currentScreen by remember { mutableStateOf("login") }
-
-    /**
      * Stores the ID of the currently logged-in user.
+     * Initialized from session manager to persist across app restarts.
      * Set after successful login or signup.
      * Used for user-specific database operations.
      * Null when no user is logged in.
      */
-    var loggedInUserId by remember { mutableStateOf<Long?>(null) }
-
-    // ==================== Database & Repository Setup ====================
+    var loggedInUserId by remember { mutableStateOf(sessionManager.getLoggedInUserId()) }
 
     /**
-     * Get the current Android context for database initialization.
+     * Holds the current screen state.
+     * Determines which screen composable to render.
+     * Starts at "home" if user is logged in, otherwise "login".
      */
-    val context = LocalContext.current
+    var currentScreen by remember { 
+        mutableStateOf(if (loggedInUserId != null) "home" else "login") 
+    }
+
+    // ==================== Database & Repository Setup ====================
 
     /**
      * Singleton database instance for the CloakTalk application.
@@ -78,12 +90,13 @@ fun EncryptionApp() {
         /**
          * Login Screen
          * - Authenticates existing users
-         * - On successful login: stores user ID and navigates to home
+         * - On successful login: stores user ID, saves session, and navigates to home
          * - Provides option to navigate to signup
          */
         "login" -> LoginScreen(
             onLogin = { userId ->
                 loggedInUserId = userId
+                sessionManager.saveUserSession(userId)
                 currentScreen = "home"
             },
             onSignUp = { currentScreen = "signup" }
@@ -92,12 +105,13 @@ fun EncryptionApp() {
         /**
          * Sign Up Screen
          * - Registers new users
-         * - On successful signup: stores user ID and navigates to home
+         * - On successful signup: stores user ID, saves session, and navigates to home
          * - Provides option to return to login
          */
         "signup" -> SignUpScreen(
             onSignUp = { userId ->
                 loggedInUserId = userId
+                sessionManager.saveUserSession(userId)
                 currentScreen = "home"
             },
             onBackToLogin = { currentScreen = "login" }
@@ -146,10 +160,16 @@ fun EncryptionApp() {
          * Settings Screen
          * - App configuration and user preferences
          * - Requires user ID for user-specific settings
+         * - Handles logout by clearing session and navigating to login
          */
         "settings" -> SettingsScreen(
             onNavigate = { currentScreen = it },
-            userId = loggedInUserId ?: 0L
+            userId = loggedInUserId ?: 0L,
+            onLogout = {
+                sessionManager.clearSession()
+                loggedInUserId = null
+                currentScreen = "login"
+            }
         )
 
         /**
