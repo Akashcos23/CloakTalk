@@ -113,8 +113,12 @@ fun EncryptionApp() {
         /**
          * History Screen
          * - Displays past encryption/decryption operations
+         * - Requires user ID to filter history by current user
          */
-        "history" -> HistoryScreen(onNavigate = { currentScreen = it })
+        "history" -> HistoryScreen(
+            onNavigate = { currentScreen = it },
+            userId = loggedInUserId ?: 0L
+        )
 
         /**
          * Designer Screen

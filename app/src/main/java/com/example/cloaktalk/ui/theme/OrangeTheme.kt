@@ -9,6 +9,7 @@ object OrangeTheme {
     val Surface = Color(0xFF1F2937)
     val SurfaceVariant = Color(0xFF374151)
     val Primary = Color(0xFFF97316)
+    val PrimaryVariant = Color(0xFFEA580C)
     val PrimaryDark = Color(0xFFEA580C)
     val PrimaryLight = Color(0xFFFB923C)
     val TextPrimary = Color(0xFFFFFFFF)

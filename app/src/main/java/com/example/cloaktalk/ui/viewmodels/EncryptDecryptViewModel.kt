@@ -5,11 +5,13 @@ package com.example.cloaktalk.ui.viewmodel
                      import androidx.lifecycle.viewModelScope
                      import com.example.cloaktalk.data.local.entity.DecryptMessageEntity
                      import com.example.cloaktalk.data.local.entity.EncryptMessageEntity
+                     import com.example.cloaktalk.data.local.entity.HistoryEntity
                      import com.example.cloaktalk.data.local.entity.KeyEntity
                      import com.example.cloaktalk.data.repository.BaseAlgorithmRepository
                      import com.example.cloaktalk.data.repository.DecryptMessageRepository
                      import com.example.cloaktalk.data.repository.DesignAlgorithmRepository
                      import com.example.cloaktalk.data.repository.EncryptMessageRepository
+                     import com.example.cloaktalk.data.repository.HistoryRepository
                      import com.example.cloaktalk.data.repository.KeyRepository
                      import kotlinx.coroutines.flow.MutableStateFlow
                      import kotlinx.coroutines.flow.StateFlow
@@ -70,19 +72,22 @@ package com.example.cloaktalk.ui.viewmodel
                       * - Performing encryption with unique key generation
                       * - Performing decryption with key validation
                       * - Storing encryption/decryption records in the database
+                      * - Creating history records for user activity tracking
                       *
                       * @property baseAlgorithmRepository Repository for base algorithm operations
                       * @property designAlgorithmRepository Repository for design algorithm operations
                       * @property keyRepository Repository for key operations
                       * @property encryptMessageRepository Repository for encrypted message operations
                       * @property decryptMessageRepository Repository for decrypted message operations
+                      * @property historyRepository Repository for history operations
                       */
                      class EncryptDecryptViewModel(
                          private val baseAlgorithmRepository: BaseAlgorithmRepository,
                          private val designAlgorithmRepository: DesignAlgorithmRepository,
                          private val keyRepository: KeyRepository,
                          private val encryptMessageRepository: EncryptMessageRepository,
-                         private val decryptMessageRepository: DecryptMessageRepository
+                         private val decryptMessageRepository: DecryptMessageRepository,
+                         private val historyRepository: HistoryRepository
                      ) : ViewModel() {
 
                          /** StateFlow containing the list of available algorithms */
@@ -163,16 +168,19 @@ package com.example.cloaktalk.ui.viewmodel
                           * 3. Performs the encryption using the provided function
                           * 4. Stores the key in the Key table
                           * 5. Stores the encrypted message in the EncryptMessage table
+                          * 6. Creates a history record for the user
                           *
                           * @param plaintext The message to encrypt
                           * @param selectedAlgorithm The algorithm to use for encryption
                           * @param keyExpireHours Number of hours until the key expires
+                          * @param userId The ID of the user performing the encryption
                           * @param encryptFunction Function that performs the actual encryption (plaintext, algorithmName, key) -> encryptedText
                           */
                          fun encryptMessage(
                              plaintext: String,
                              selectedAlgorithm: AlgorithmOption,
                              keyExpireHours: Int,
+                             userId: Long,
                              encryptFunction: (String, String, String) -> String
                          ) {
                              viewModelScope.launch {
@@ -205,7 +213,16 @@ package com.example.cloaktalk.ui.viewmodel
                                          keyId = keyId,
                                          algorithmName = selectedAlgorithm.name
                                      )
-                                     encryptMessageRepository.insertEncryptMessage(encryptMessageEntity)
+                                     val encryptId = encryptMessageRepository.insertEncryptMessage(encryptMessageEntity)
+
+                                     // Create and save history record for the user
+                                     val historyEntity = HistoryEntity(
+                                         encryptId = encryptId,
+                                         decryptId = null,
+                                         keyId = keyId,
+                                         user_id = userId
+                                     )
+                                     historyRepository.insertHistory(historyEntity)
 
                                      // Update result state with success
                                      _encryptionResult.value = EncryptionResult(
@@ -236,16 +253,19 @@ package com.example.cloaktalk.ui.viewmodel
                           * 1. Validates that the key exists and is active (not expired)
                           * 2. Performs the decryption using the provided function
                           * 3. Stores the decryption record in the DecryptMessage table
+                          * 4. Creates a history record for the user
                           *
                           * @param encryptedText The encrypted message to decrypt
                           * @param key The decryption key (8-digit)
                           * @param selectedAlgorithm The algorithm to use for decryption
+                          * @param userId The ID of the user performing the decryption
                           * @param decryptFunction Function that performs the actual decryption (encryptedText, algorithmName, key) -> decryptedText
                           */
                          fun decryptMessage(
                              encryptedText: String,
                              key: String,
                              selectedAlgorithm: AlgorithmOption,
+                             userId: Long,
                              decryptFunction: (String, String, String) -> String
                          ) {
                              viewModelScope.launch {
@@ -275,7 +295,19 @@ package com.example.cloaktalk.ui.viewmodel
                                          algorithmName = selectedAlgorithm.name,
                                          isSuccessful = true
                                      )
-                                     decryptMessageRepository.insertDecryptMessage(decryptMessageEntity)
+                                     val decryptId = decryptMessageRepository.insertDecryptMessage(decryptMessageEntity)
+
+                                     // Find the corresponding encrypt record to link in history
+                                     val encryptRecord = encryptMessageRepository.getEncryptMessageByKeyId(keyEntity.keyId)
+                                     
+                                     // Create and save history record for the user
+                                     val historyEntity = HistoryEntity(
+                                         encryptId = encryptRecord?.encryptId ?: 0,
+                                         decryptId = decryptId,
+                                         keyId = keyEntity.keyId,
+                                         user_id = userId
+                                     )
+                                     historyRepository.insertHistory(historyEntity)
 
                                      // Update result state with success
                                      _decryptionResult.value = DecryptionResult(
@@ -341,13 +373,15 @@ package com.example.cloaktalk.ui.viewmodel
                       * @property keyRepository Repository for key operations
                       * @property encryptMessageRepository Repository for encrypted message operations
                       * @property decryptMessageRepository Repository for decrypted message operations
+                      * @property historyRepository Repository for history operations
                       */
                      class EncryptDecryptViewModelFactory(
                          private val baseAlgorithmRepository: BaseAlgorithmRepository,
                          private val designAlgorithmRepository: DesignAlgorithmRepository,
                          private val keyRepository: KeyRepository,
                          private val encryptMessageRepository: EncryptMessageRepository,
-                         private val decryptMessageRepository: DecryptMessageRepository
+                         private val decryptMessageRepository: DecryptMessageRepository,
+                         private val historyRepository: HistoryRepository
                      ) : ViewModelProvider.Factory {
                          @Suppress("UNCHECKED_CAST")
                          override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -357,7 +391,8 @@ package com.example.cloaktalk.ui.viewmodel
                                      designAlgorithmRepository,
                                      keyRepository,
                                      encryptMessageRepository,
-                                     decryptMessageRepository
+                                     decryptMessageRepository,
+                                     historyRepository
                                  ) as T
                              }
                              throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

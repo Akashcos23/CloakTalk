@@ -69,13 +69,16 @@ fun DecryptScreen(
     val database = remember { CloakTalkDatabase.getInstance(context) }
 
     // Initialize ViewModel with all required repositories
+    // Use userId as key to ensure a new ViewModel is created when user changes
     val viewModel: EncryptDecryptViewModel = viewModel(
+        key = "decrypt_viewmodel_$userId",
         factory = EncryptDecryptViewModelFactory(
             BaseAlgorithmRepository(database.baseAlgorithmDao()),
             DesignAlgorithmRepository(database.designAlgorithmDao()),
             KeyRepository(database.keyDao()),
             EncryptMessageRepository(database.encryptMessageDao()),
-            DecryptMessageRepository(database.decryptMessageDao())
+            DecryptMessageRepository(database.decryptMessageDao()),
+            HistoryRepository(database.historyDao())
         )
     )
 
@@ -191,7 +194,8 @@ fun DecryptScreen(
                             viewModel.decryptMessage(
                                 encryptedText = encryptedMessage,
                                 key = decryptionKey,
-                                selectedAlgorithm = algorithm
+                                selectedAlgorithm = algorithm,
+                                userId = userId
                             ) { text, algoName, key ->
                                 val result = performDecryption(
                                     encryptedMessage = text,
