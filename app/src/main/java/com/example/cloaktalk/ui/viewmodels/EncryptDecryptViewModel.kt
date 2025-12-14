@@ -293,6 +293,7 @@ package com.example.cloaktalk.ui.viewmodel
                                      _isLoading.value = false
                                  }
                              }
+
                          }
 
                          /**
@@ -319,6 +320,17 @@ package com.example.cloaktalk.ui.viewmodel
                          fun refreshAlgorithms() {
                              loadAlgorithms()
                          }
+                         /**
+                          * Clears all encryption and decryption state.
+                          * Call this when navigating away from encrypt/decrypt screens
+                          * to ensure fresh state on next visit.
+                          */
+                         fun clearAllState() {
+                             _encryptionResult.value = null
+                             _decryptionResult.value = null
+                             _isLoading.value = false
+                         }
+
                      }
 
                      /**
