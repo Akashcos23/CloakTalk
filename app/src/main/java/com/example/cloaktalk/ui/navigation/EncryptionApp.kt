@@ -145,8 +145,12 @@ fun EncryptionApp() {
         /**
          * Settings Screen
          * - App configuration and user preferences
+         * - Requires user ID for user-specific settings
          */
-        "settings" -> SettingsScreen(onNavigate = { currentScreen = it })
+        "settings" -> SettingsScreen(
+            onNavigate = { currentScreen = it },
+            userId = loggedInUserId ?: 0L
+        )
 
         /**
          * Encrypt Screen
