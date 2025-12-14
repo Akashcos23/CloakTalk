@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     //alias(libs.plugins.google.gms.google.services)
     id("com.google.gms.google-services")
+    id("kotlin-kapt")
 
 
 
@@ -49,6 +50,11 @@ android {
 }
 
 dependencies {
+
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
     // Firebase BoM (Only use one. 34.6.0 is newer)
     implementation(platform(libs.firebase.bom))
     implementation ("com.google.firebase:firebase-auth-ktx:21.1.0")
