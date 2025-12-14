@@ -146,6 +146,7 @@ class HistoryViewModel(
     /**
      * Loads all encrypted messages and joins them with their key information.
      * Only loads messages belonging to the current user.
+     * Only includes messages that the user actually encrypted (not decrypted).
      */
     private suspend fun loadEncryptedMessages() {
         val encryptedList = mutableListOf<EncryptedMessageWithKey>()
@@ -153,8 +154,12 @@ class HistoryViewModel(
         // Get history records for current user
         val userHistory = historyRepository.getHistoryByUserId(userId)
         
-        // Get unique encryptIds from user's history
-        val userEncryptIds = userHistory.map { it.encryptId }.toSet()
+        // Get unique encryptIds from user's history WHERE decryptId is null
+        // This ensures we only get messages the user actually encrypted, not decrypted
+        val userEncryptIds = userHistory
+            .filter { it.decryptId == null }  // Only encryption operations (not decryption)
+            .map { it.encryptId }
+            .toSet()
 
         // Get all encrypted messages from repository and filter by user's history
         val allEncrypted = encryptMessageRepository.getAllEncryptedMessages()
